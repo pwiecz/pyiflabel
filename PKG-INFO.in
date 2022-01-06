@@ -1,0 +1,18 @@
+Metadata-Version: 1.1 
+Name: @PACKAGE_NAME@ 
+Version: @PACKAGE_VERSION@
+Summary: A pure-Python implementation of the Treaty of Babel 
+Home-page: http://pyifbabel.invergo.net/ 
+Author: Brandon Invergo 
+Author-email: @PACKAGE_BUGREPORT@
+License: GPLv3
+Description: pyifbabel is a libary and command-line tool for extracting metadata
+information from interactive fiction (a.k.a. "text adventure") game files.
+Platform: Any
+Classifier: License :: OSI Approved :: GNU General Public License (GPL) 
+Classifier: Development Status :: 4 - Beta 
+Classifier: Programming Language :: Python 
+Classifier: Programming Language :: Python :: 2.5 
+Classifier: Operating System :: OS Independent 
+Classifier: Intended Audience :: Developers 
+Classifier: Topic :: Games/Entertainment 

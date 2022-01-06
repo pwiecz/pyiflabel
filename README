@@ -1,0 +1,29 @@
+# pyifbabel
+
+This is a Python implementation of the Treaty of Babel
+(http://babel.ifarchive.org/), a unified method for identifying
+interactive fiction ("text adventure") story files.
+
+This module was originally written by Per Liedman and, later, Brandon
+Invergo, for Grotesque, an Interactive Fiction library manager
+(http://grotesque.invergo.net).  While much of the module was written
+from scratch, many parts were liberally adapted from the C source of
+the official `babel' software provided on the Treaty website.  For
+that, much indebtedness goes to L. Ross Raszewski for writing the
+original code and to all the developers of the game formats for
+helping him decode all that binary data.
+
+# Testing
+
+If you've downloaded the source and you are interested in running the
+unit tests, note that in order to run these tests, you must provide
+your own story files.
+
+# Upcoming
+
+* verify/lint ifiction files
+* blorb files
+* Python 3 support
+
+# Contact
+Brandon Invergo <brandon@invergo.net>

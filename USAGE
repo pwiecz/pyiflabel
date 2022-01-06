@@ -1,0 +1,97 @@
+# Usage
+
+There are two primary ways to use this library. The first way is via
+the `treatyofbabel.babel` and `treatyofbabel.ifiction` modules. The
+`babel` module contains functions for extracting metadata from
+interactive fiction story files. Until proper documentation is
+written, it is best to use Python's introspection capabilities to view
+the available functions (`dir(treatyofbabel.babel)`). In general, you
+will pass these functions a string referring to the file's
+location. So, for example, to determine the format of the file (ie
+glulx, tads2, etc.), you would do:
+
+    >>> babel.deduce_format("path/to/file")
+
+To calculate the IFID(s) of a file, you would do:
+
+    >>> babel.get_ifids("path/to/file")
+
+The `ifiction` module contains functions for working with IFiction
+files. These are simply XML files, so the module essentially just
+consists of IFiction-specific convenience functions. The functions
+typically return objects belonging to the built-in Python module
+`xml.dom.minidom`, though you generally won't have to do anything with
+these other than pass them between `ifiction` functions. One can build
+up an IFiction file manually:
+
+    >>> ifdom = ifiction.create_ifiction_dom()
+    >>> story = ifiction.add_story(ifdom)
+    >>> ifiction.add_identification(ifdom, story, list_of_ifids, story_format, story_bafn)
+    >>> ifiction.add_bibliographic(ifdom, story, truncate=False, title="My Story", 
+        author="Pat Smith")
+
+...and so on.  Alternatively, given an IFiction file, you can extract
+information from it:
+
+    >>> ifdom = ifiction.get_ifiction_dom("path/to/file.ifiction")
+    >>> assert ifiction.is_ifiction(ifdom):
+    >>> stories = ifiction.get_all_stories(ifdom)
+    >>> story = stories[0]
+    >>> ident = ifiction.get_identification(story)
+
+...and so on.
+
+There is another, object-oriented means of doing this, contained in
+the `treatyofbabel.ifstory` module. This module defines the IFStory
+class, which has fields corresponding to the information contained in
+an IFiction file. There are various ways you can use this class. You
+can build up a story description manually and then output it to
+IFiction XML:
+
+    >>> story = ifstory.IFStory()
+    >>> story.ifid_list = ["ZCODE-88-840726-A129"]
+    >>> story.bibliographic["title"] = "Zork I"
+
+etc. This is tedious, though, so better options are available.  If you
+have an IFiction file, you can use that to fill in all of the fields:
+
+    >>> ifdom = ifiction.get_ifiction_dom("path/to/file.ifiction")
+    >>> story_node = ifiction.get_all_stories(ifdom)[0]
+    >>> story = ifstory.IFStory(ific_story_node=story_node)
+    >>> print story.bibliographic["title"]
+    "Zork I"
+
+You can use the capabilities provided by the `treatyofbabel.babel`
+module to automatically fill in some information (note that for most
+formats, this will only be able to generate an IFID and determine the
+story format):
+
+    >>> story = ifstory.IFStory(story_file="path/to/storyfile")
+    >>> story.load_from_story_file()
+    >>> print story.ifid_list
+    ["ZCODE-88-840726-A129"]
+
+Given an IFID, you may fill in the rest of the fields and optionally
+fetch cover art by remotely querying the IFDB (http://ifdb.tads.org)
+[continuing from the last example]:
+
+    >>> story.load_from_ifdb()
+    >>> print story.bibliographic["title"]
+    "Zork I'
+    >>> print story.cover.img_format
+    "jpg"
+    >>> with open("ZorkI.jpg", "wb") as img_handle:
+    ...     img_handle.write(story.cover.data)
+    >>> with open("ZorkI.ifiction", "w") as ific_handle:
+    ...     ific_handle.write(story.to_ifiction())
+
+Once again, until proper documentation has been written, it is
+recommended to use introspection or to read the (hopefully readable)
+code to see all of the functions available.
+
+Finally, `pyifbabel` is an included script which mimics the `babel`
+commandline utility that is included from the official Treaty of Babel
+site. Run `$ pyifbabel --help` from the commandline to see its
+options.
+
+

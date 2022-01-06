@@ -1,0 +1,279 @@
+#!@PYTHON@
+# -*- coding: utf-8 -*-
+#
+#       pyifbabel
+#       
+#       Copyright © 2012, 2013, 2014, 2018 Brandon Invergo <brandon@invergo.net>
+#       
+#       This file is part of pyifbabel.
+#
+#       pyifbabel is free software: you can redistribute it and/or modify
+#       it under the terms of the GNU General Public License as published by
+#       the Free Software Foundation, either version 3 of the License, or
+#       (at your option) any later version.
+#
+#       pyifbabel is distributed in the hope that it will be useful,
+#       but WITHOUT ANY WARRANTY; without even the implied warranty of
+#       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#       GNU General Public License for more details.
+#
+#       You should have received a copy of the GNU General Public License
+#       along with pyifbabel.  If not, see <http://www.gnu.org/licenses/>.
+
+
+import sys
+import getopt
+import os.path
+
+from treatyofbabel import ifiction
+import treatyofbabel as babel
+
+def print_usage():
+    print """
+pyifbabel: Treaty of Babel Analysis Tool ({0}, Treaty of Babel revision {1})
+Usage:
+    pyifbabel --ifid <storyfile>
+    pyifbabel --ifid <ifictionfile>
+        Deduce IFID
+    pyifbabel --format <storyfile>
+    Deduce story format
+    pyifbabel --ifiction <storyfile>
+        Extract iFiction file
+    pyifbabel --meta <storyfile>
+        Print story metadata
+    pyifbabel --identify <storyfile>
+        Describe story file
+    pyifbabel --cover <storyfile>
+        Extract cover art
+    pyifbabel --story <storyfile>
+        Extract story file (ie. from a blorb)
+    pyifbabel --verify <ifictionfile>
+        Verify integrity of iFiction file
+    pyifbabel --lint <ifictionfile>
+        Verify style of iFiction file
+    pyifbabel --fish <storyfile>
+    pyifbabel --fish <ifictionfile>
+        Extract all iFiction and cover art
+    pyifbabel --unblorb <storyfile>
+        As --fish, but also extract story files
+    pyifbabel --blorb <storyfile> <ifictionfile> [<cover art>]
+        Bundle story file and (sparse) iFiction into blorb
+    pyifbabel --complete <storyfile> <ifictionfile>
+        Create complete iFiction file from sparse iFiction
+
+For functions which extract files, add "--to <directory>" to the command
+to set the output directory.
+The input file can be specified as "-" to read from standard input
+(This may only work for .iFiction files)""".format(treatyofbabel.PYIFBABEL_VERSION, treatyofbabel.TREATY_VERSION)
+
+
+def print_ifids(in_file):
+    ifids = babel.get_ifids(in_file)
+    for ifid in ifids:
+        print "IFID: {0}".format(ifid)
+
+
+def print_format(in_file):
+    try:
+        ifformat = babel.deduce_format(in_file)
+    except:
+        ifformat = "unknown"
+    print "Format: {0}".format(ifformat)
+
+
+def extract_ifiction(in_file, to_dir):
+    ifids = babel.get_ifids(in_file)
+    if ifids is None:
+        ifid = "UNKNOWN"
+    else:
+        ifid = ifids[0]
+    meta = babel.get_meta(in_file, True)
+    if meta is None:
+        sys.exit("No iFiction record for {0}".format(ifid))
+    basename = '.'.join([ifid, "iFiction"])
+    if to_dir is not None:
+        out_path = os.path.join(to_dir, basename)
+    else:
+        out_path = basename
+    with open(out_path, 'w') as out_handle:
+        out_handle.write(meta)
+
+
+def print_meta(in_file):
+    ifids = babel.get_ifids(in_file)
+    if ifids is None:
+        ifid = "UNKNOWN"
+    else:
+        ifid = ifids[0]
+    meta = babel.get_meta(in_file, True)
+    if meta is None:
+        sys.exit("No iFiction record for {0}".format(ifid))
+    print meta
+
+
+def identify_file(in_file):
+    meta = babel.get_meta(in_file, True)
+    ifids = babel.get_ifids(in_file)
+    if ifids is None:
+        ifid = "UNKNOWN"
+    else:
+        ifid = ifids[0]
+    try:
+        ifformat = babel.deduce_format(in_file)
+    except BabelError:
+        ifformat = None
+    warning_line = ""
+    if ifformat is None:
+        warning_line_a = "Warning: Story format could not be positively "
+        warning_line_b = "identified. Guessing executable"
+        warning_line = "".join([warning_line_a, warning_line_b])
+        ifformat = "executable"
+    size = os.path.getsize(in_file) / 1024
+    cover = babel.get_cover(in_file)
+    if meta is not None:
+        ifiction_dom = ifiction.get_ifiction_dom(meta)
+        story_node = ifiction.get_all_stories(ifiction_dom)[0]
+        biblio = ifiction.get_bibliographic(story_node)
+        biblio_line = ""
+        title = biblio.get("title")
+        if title is not None:
+            biblio_line = "".join([biblio_line, '"{0}"'.format(title)])
+        author = biblio.get("author")
+        if author is not None:
+            biblio_line = "".join([biblio_line, " by {0}".format(author)])
+        if biblio_line == "":
+            biblio_line = "No bibliographic data"
+    else:
+        biblio_line = "No bibliographic data"
+    ifid_line = "IFID: {0}".format(ifid)
+    if cover is None:
+        cover_str = "no cover"
+    else:
+        if cover.img_format == "jpg":
+            cover.img_format = "jpeg"
+        if cover.description is not None:
+            cover_str = "cover {0}x{1} {2}: {3}".format(
+                cover.width, cover.height, cover.img_format,
+                cover.description)
+        else:
+            cover_str = "cover {0}x{1} {2}: No description".format(
+                cover.width, cover.height, cover.img_format)
+    info_line = "{0}, {1}k, {2}".format(ifformat, size, cover_str)
+    if warning_line != "":
+        print "\n".join([warning_line, biblio_line, ifid_line, info_line])
+    else:
+        print "\n".join([biblio_line, ifid_line, info_line])
+
+
+def extract_cover(in_file, to_dir):
+    ifids = babel.get_ifids(in_file)
+    if ifids is None:
+        ifid = "UNKNOWN"
+    else:
+        ifid = ifids[0]
+    cover = babel.get_cover(in_file)
+    if cover is None:
+        sys.exit("No cover art for {0}".format(ifid))
+    basename = '.'.join([ifid, cover.img_format])
+    if to_dir is not None:
+        out_path = os.path.join(to_dir, basename)
+    else:
+        out_path = basename
+    with open(out_path, 'wb') as out_handle:
+        out_handle.write(cover.data)
+
+
+def extract_story(in_file, to_dir):
+    ifids = babel.get_ifids(in_file)
+    if ifids is None:
+        ifid = "UNKNOWN"
+    else:
+        ifid = ifids[0]
+    story = babel.get_story(in_file)
+    handler = babel.deduce_handler(in_file, story)
+    ext = handler.get_story_file_extension(story)
+    basename = "".join([ifid, ext])
+    if to_dir is not None:
+        out_path = os.path.join(to_dir, basename)
+    else:
+        out_path = basename
+    with open(out_path, 'wb') as out_handle:
+        out_handle.write(story)
+
+
+def create_blorb(story_file, ifiction_file, cover_art):
+    file_name = story_file.rpartition('.')[0]
+    out_file = '.'.join([file_name, "blorb"])
+    if ifiction_file is None:
+        sys.exit("No iFiction file specified")
+    babel.make_blorb(out_file, story_file, ifiction_file, cover_art)
+
+
+if __name__ == "__main__":
+    to_dir = None
+    long_args = ["ifid", "format", "ifiction", "meta", "identify", "cover",
+                 "story", "verify", "lint", "fish", "unblorb", "blorb",
+                 "blorbs", "complete", "to="]
+    try:
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "", long_args)
+    except getopt.GetoptError, err:
+        print str(err)
+        print_usage()
+        sys.exit(2)
+    if len(opts) == 0:
+        print_usage()
+        sys.exit(2)
+    if len(opts) > 2:
+        print_usage()
+        sys.exit(2)
+    if len(opts) == 2:
+        if "--to" in opts[0]:
+            to_dir = opts[0][1]
+        elif "--to" in opts[1]:
+            to_dir = opts[1][1]
+        else:
+            print_usage()
+            sys.exit(2)
+    mode = opts[0][0][2:]
+    if len(args) == 0:
+        print_usage()
+        sys.exit(2)
+    in_file = args[0]
+    if in_file == "-":
+        in_file = sys.stdin
+    in_file2 = None
+    if len(args) >= 2:
+        in_file2 = args[1]
+    in_file3 = None
+    if len(args) == 3:
+        in_file3 = args[2]
+    if mode == "ifid":
+        print_ifids(in_file)
+    elif mode == "format":
+        print_format(in_file)
+    elif mode == "ifiction":
+        extract_ifiction(in_file, to_dir)
+    elif mode == "meta":
+        print_meta(in_file)
+    elif mode == "identify":
+        identify_file(in_file)
+    elif mode == "cover":
+        extract_cover(in_file, to_dir)
+    elif mode == "story":
+        extract_story(in_file, to_dir)
+    elif mode == "verify":
+        sys.exit("This function is not yet implemented")
+    elif mode == "lint":
+        sys.exit("This function is not yet implemented")
+    elif mode == "fish":
+        extract_ifiction(in_file, to_dir)
+        extract_cover(in_file, to_dir)
+    elif mode == "unblorb":
+        extract_ifiction(in_file, to_dir)
+        extract_cover(in_file, to_dir)
+        extract_story(in_file, to_dir)
+    elif mode == "blorb":
+        create_blorb(in_file, in_file2, in_file3)
+    elif mode == "complete":
+        sys.exit("This function is not yet implemented")
+    sys.exit(0)

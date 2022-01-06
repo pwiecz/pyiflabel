@@ -1,0 +1,30 @@
+How To Install
+--------------
+
+There are two ways to install pyifbabel. If you are familiar with the
+installation of Python modules, there is the usual `setup.py'
+script. Simply run:
+
+    $ python setup.py install
+
+If, on the other hand, you prefer the classic GNU style of
+installation, you will find a standard `configure' script and a
+`Makefile.in'. You may simply do the following:
+
+    $ ./configure
+    $ make install
+
+Both methods allow you to install to a non-standard location by
+passing the `--prefix' argument:
+
+    $ ./configure --prefix=/usr
+    $ make install
+
+The GNU method also provides you with the option of installing to a
+virtualenv. Simply pass `--with-virtualenv' to the `configure' script
+and set `--prefix' to the location of the virtualenv:
+
+    $ ./configure --with-virtualenv --prefix=/home/monty/venv
+
+
+
